@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cualquiera lee y vota (solo el campo `votos`, y solo si la votación sigue abierta).
+    // Crear, fijar, reabrir y borrar requiere la sesión de admin (Firebase Authentication).
+    match /votaciones/{id} {
+      allow read: if true;
+      allow create, delete: if request.auth != null;
+      allow update: if request.auth != null
+        || (resource.data.cerrada == null
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votos']));
+    }
+    // config/junta = { lista: [nombres] }
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

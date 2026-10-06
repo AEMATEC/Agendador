@@ -32,7 +32,10 @@
   .peligro { background: #B3261E; }
   .link { background: none; color: var(--muted); font-weight: 500; padding: 0; text-decoration: underline; margin-top: 32px; }
   .link:hover { background: none; }
-  input, select { font: inherit; padding: 9px 10px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--navy); width: 100%; }
+  details.admin { margin-top: 32px; color: var(--muted); }
+  summary { cursor: pointer; }
+  textarea { resize: vertical; }
+  input, select, textarea { font: inherit; padding: 9px 10px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--navy); width: 100%; }
   label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
   .fila { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .fila > * { flex: 1; min-width: 120px; }
@@ -56,9 +59,10 @@
   /* Cuadrícula */
   .grid { display: grid; grid-template-columns: 46px repeat(var(--d), minmax(0, 1fr)); user-select: none; -webkit-user-select: none; background: var(--card); border: 1px solid var(--borde); border-radius: 10px; }
   .dh { position: sticky; top: 0; z-index: 1; background: var(--card); text-align: center; font-size: 12px; font-weight: 600; padding: 6px 2px; border-bottom: 1px solid var(--borde); line-height: 1.2; }
-  .fr { display: flex; justify-content: center; gap: 2px; margin-top: 4px; }
-  .fr button { padding: 3px 0; width: 30%; max-width: 26px; font-size: 11px; border-radius: 4px; background: var(--bg); color: var(--navy); border: 1px solid var(--borde); }
+  .fr { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; padding: 0 3px; }
+  .fr button { padding: 0; height: 28px; width: 100%; font-size: 12px; border-radius: 6px; background: var(--bg); color: var(--navy); border: 1px solid var(--borde); }
   .fr button:hover { background: var(--teal-light); }
+  @media (max-width: 600px) { .resto { display: none; } }
   .t { font-size: 11px; color: var(--muted); text-align: right; padding-right: 6px; transform: translateY(-7px); }
   .c, .h { height: 26px; border-left: 1px solid var(--borde); border-bottom: 1px dashed #E8EFF3; }
   .hr { border-bottom: 1px solid var(--borde); }

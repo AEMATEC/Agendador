@@ -5,8 +5,10 @@ Agendador de sesiones de la Junta Directiva AEMATEC (≈8 personas). Idioma de l
 ## Stack y restricciones
 
 - **Sin build, sin npm, sin framework.** HTML + módulos ES servidos estáticos (GitHub Pages). Mantenerlo así.
-- Firestore vía CDN de gstatic (`firebase 10.12.2`), cargado solo si `config.firebase.apiKey` existe; si no, `demo()` usa localStorage con **la misma interfaz** (`lista, ver, crear, votar, editar, borrar`). Cualquier operación nueva debe implementarse en ambos.
-- Sin autenticación por diseño (decisión del usuario): nombre libre, clave admin en `config.js` solo como "seguro" anti-error.
+- Firestore + Auth vía CDN de gstatic (`firebase 10.12.2`), cargados solo si `config.firebase.apiKey` existe (proyecto `agendador-839ba`). Si no, `demo()` usa localStorage con **la misma interfaz** (`lista, ver, crear, votar, editar, borrar, alCambiarAdmin, entrar, salir, miembros, guardarMiembros`). Cualquier operación nueva debe implementarse en ambos.
+- Los miembros votan sin autenticarse: eligen su nombre, sin verificación (decisión del usuario).
+- Admin = una sola cuenta de Firebase Auth (`config.correoAdmin`, email/contraseña); la "clave" es su contraseña, que vive solo en Firebase. Los permisos se aplican en `firestore.rules`, que el usuario pega en la consola (no hay CLI de Firebase configurada). Si cambias qué campos escribe un no-admin, actualiza las reglas.
+- Miembros: `config/junta.lista` en Firestore; `config.miembros` es solo el valor inicial si ese documento no existe.
 - Colores: tokens en `:root` de `index.html`, tomados de aematec.github.io (`--navy #0D2B45`, `--teal #00798A`, `--teal-line #00B5C8`, `--teal-light #39C7D5`). Fuente Montserrat.
 
 ## Modelo de datos (colección `votaciones`, un documento por votación)
@@ -28,4 +30,6 @@ Agendador de sesiones de la Junta Directiva AEMATEC (≈8 personas). Idioma de l
 
 ## Probar
 
-`python -m http.server 8080` (o la configuración `agendador` de `.claude/launch.json`). Sembrar datos demo escribiendo en `localStorage['agendador-demo']`. Admin: `localStorage.clave = 'aematec'`.
+`python -m http.server 8080` (o la configuración `agendador` de `.claude/launch.json`). Con la `apiKey` puesta se usa el Firebase real; para modo demo, vacía `apiKey` temporalmente. En demo: sembrar en `localStorage['agendador-demo']`, admin con `localStorage['demo-admin'] = '1'`.
+
+Despliegue: push a `main` de github.com/AEMATEC/Agendador → GitHub Pages.

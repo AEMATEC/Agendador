@@ -9,8 +9,9 @@ const local = {
   set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
 };
 const fallo = (e) => { app.innerHTML = `<p class="error">Error de conexión: ${esc(e.message)}</p>`; };
-const esAdmin = () => local.get('clave') === config.claveAdmin;
 const DEMO = !config.firebase.apiKey;
+let admin = false, miembros = config.miembros;
+const esAdmin = () => admin;
 
 // ---------- Almacenamiento: Firestore, o localStorage en modo demo (misma interfaz) ----------
 
@@ -18,10 +19,17 @@ async function firestore() {
   const base = 'https://www.gstatic.com/firebasejs/10.12.2/';
   const { initializeApp } = await import(base + 'firebase-app.js');
   const f = await import(base + 'firebase-firestore.js');
-  const col = f.collection(f.getFirestore(initializeApp(config.firebase)), 'votaciones');
+  const a = await import(base + 'firebase-auth.js');
+  const fb = initializeApp(config.firebase), store = f.getFirestore(fb), auth = a.getAuth(fb);
+  const col = f.collection(store, 'votaciones'), junta = f.doc(store, 'config', 'junta');
   const ref = (id) => f.doc(col, id);
   const conId = (d) => ({ id: d.id, ...d.data() });
   return {
+    alCambiarAdmin: (cb) => a.onAuthStateChanged(auth, (u) => cb(!!u)),
+    entrar: (clave) => a.signInWithEmailAndPassword(auth, config.correoAdmin, clave),
+    salir: () => a.signOut(auth),
+    miembros: (cb) => f.onSnapshot(junta, (d) => cb(d.data()?.lista), fallo),
+    guardarMiembros: (lista) => f.setDoc(junta, { lista }),
     lista: (cb) => f.onSnapshot(f.query(col, f.orderBy('creada', 'desc')), (s) => cb(s.docs.map(conId)), fallo),
     ver: (id, cb) => f.onSnapshot(ref(id), (d) => cb(d.exists() ? conId(d) : null), fallo),
     crear: (v) => f.addDoc(col, v).then((r) => r.id),
@@ -33,12 +41,18 @@ async function firestore() {
 
 function demo() {
   const leer = () => JSON.parse(local.get('agendador-demo') || '{}');
-  const subs = new Set();
-  const guardar = (todo) => { local.set('agendador-demo', JSON.stringify(todo)); subs.forEach((f) => f()); };
+  const subs = new Set(), avisar = () => subs.forEach((f) => f());
+  const fijar = async (k, v) => { local.set(k, v); avisar(); };
+  const guardar = (todo) => fijar('agendador-demo', JSON.stringify(todo));
   const sub = (f) => (subs.add(f), f(), () => subs.delete(f));
-  addEventListener('storage', () => subs.forEach((f) => f()));
+  addEventListener('storage', avisar);
   const cambiar = async (id, fn) => { const todo = leer(); fn(todo, todo[id]); guardar(todo); };
   return {
+    alCambiarAdmin: (cb) => sub(() => cb(local.get('demo-admin') === '1')),
+    entrar: () => fijar('demo-admin', '1'),
+    salir: () => fijar('demo-admin', ''),
+    miembros: (cb) => sub(() => cb(JSON.parse(local.get('demo-miembros') || 'null'))),
+    guardarMiembros: (lista) => fijar('demo-miembros', JSON.stringify(lista)),
     lista: (cb) => sub(() => cb(Object.entries(leer()).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.creada - a.creada))),
     ver: (id, cb) => sub(() => { const v = leer()[id]; cb(v ? { id, ...v } : null); }),
     crear: async (v) => { const id = Date.now().toString(36); await cambiar(id, (todo) => { todo[id] = v; }); return id; },
@@ -84,10 +98,23 @@ function inicio() {
       ${abiertas ? `<ul class="lista">${abiertas}</ul>` : '<p class="muted">No hay votaciones abiertas.</p>'}
       <h2>Sesiones fijadas</h2>
       ${cerradas ? `<ul class="lista">${cerradas}</ul>` : '<p class="muted">Todavía ninguna.</p>'}
-      ${esAdmin() ? '' : '<button class="link" id="admin">Soy de secretaría / presidencia</button>'}`;
-    $('#admin')?.addEventListener('click', () => {
-      const c = prompt('Clave de administración');
-      if (c === config.claveAdmin) { local.set('clave', c); ruta(); } else if (c !== null) alert('Clave incorrecta');
+      ${esAdmin() ? `<details class="card"><summary><b>Panel de administración</b></summary>
+          <form id="fm"><label for="m">Miembros de la junta (uno por línea)</label>
+            <textarea id="m" name="m" rows="9">${miembros.map(esc).join('\n')}</textarea>
+            <p class="fila"><button>Guardar miembros</button><span id="ok" class="muted"></span></p></form>
+          <button class="sec" id="salir">Cerrar sesión de admin</button></details>`
+      : `<details class="admin"><summary>Soy de secretaría / presidencia</summary>
+          <form id="login" class="fila"><input type="password" name="clave" placeholder="Clave" aria-label="Clave de administración" required autocomplete="current-password"><button style="flex:0">Entrar</button></form>
+          <p id="err" class="error"></p></details>`}`;
+    $('#login')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      db.entrar(e.target.clave.value).catch(() => { $('#err').textContent = 'Clave incorrecta.'; });
+    });
+    $('#salir')?.addEventListener('click', () => db.salir());
+    $('#fm')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const lista = [...new Set(e.target.m.value.split('\n').map((s) => s.trim()).filter(Boolean))];
+      db.guardarMiembros(lista).then(() => { $('#ok') && ($('#ok').textContent = 'Guardado ✓'); }, (err) => alert('No se pudo guardar: ' + err.message));
     });
   });
 }
@@ -165,7 +192,7 @@ function votacion(id) {
     let h = `<div class="grid ${modo}" style="--d:${v.dias.length}"><div class="dh"></div>`;
     for (const d of v.dias) {
       h += `<div class="dh">${esc(d.label)}${editable ? `<div class="fr">${Object.keys(FRANJAS)
-        .map((f) => `<button data-franja="${f}" data-dia="${d.id}" title="Marcar ${f.toLowerCase()}" aria-label="${f} del ${esc(d.label)}">${f[0]}</button>`).join('')}</div>` : ''}</div>`;
+        .map((f) => `<button data-franja="${f}" data-dia="${d.id}" title="Marcar ${f.toLowerCase()}" aria-label="${f} del ${esc(d.label)}">${f[0]}<span class="resto">${f.slice(1)}</span></button>`).join('')}</div>` : ''}</div>`;
     }
     for (let i = 0; i < n; i++) {
       const m = minuto(v, i), hr = i % 2 ? ' hr' : '';
@@ -182,7 +209,7 @@ function votacion(id) {
   function resultados() {
     const personas = Object.keys(v.votos || {});
     if (!personas.length) return '<p class="muted">Todavía nadie ha votado.</p>';
-    const faltan = config.miembros.filter((m) => !personas.includes(m));
+    const faltan = miembros.filter((m) => !personas.includes(m));
     const top = ranking(v);
     const op = (w) => `<li><b>${esc(rango(v, w))}</b>
       <span>${w.si.length} de ${personas.length} pueden${w.quiza.length ? ` · ${w.quiza.length} si es necesario` : ''}</span>
@@ -197,7 +224,7 @@ function votacion(id) {
   }
 
   function quienSoy() {
-    const nombres = [...new Set([...config.miembros, ...Object.keys(v.votos || {})])];
+    const nombres = [...new Set([...miembros, ...Object.keys(v.votos || {})])];
     return `<div class="card"><b>¿Quién eres?</b>
       ${nombres.length ? `<div class="chips">${nombres.map((n) => `<button class="chip" data-nombre="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
       <form id="fn" class="fila" style="margin-top:8px"><input name="n" placeholder="Tu nombre" required maxlength="40"><button style="flex:0">Entrar</button></form></div>`;
@@ -312,4 +339,6 @@ function ruta() {
   salir = r === 'v' && id ? votacion(id) : r === 'nueva' && esAdmin() ? nueva() : inicio();
 }
 addEventListener('hashchange', ruta);
+await new Promise((listo) => db.miembros((l) => { miembros = l || config.miembros; listo(); }));
+db.alCambiarAdmin((a) => { if (a !== admin) { admin = a; ruta(); } });
 ruta();

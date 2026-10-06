@@ -4,7 +4,7 @@ Página para encontrar un espacio común para las sesiones (virtuales) de la Jun
 
 ## Cómo funciona
 
-1. **Secretaría/presidencia crea una votación**: título, días (fechas concretas, máximo 7, o "horario semanal fijo" de lunes a domingo), duración (1, 1,5 o 2 h) y rango de horas (por defecto de 9:00 am a 11:00 pm).
+1. **Secretaría/presidencia entra con la clave** ("Soy de secretaría / presidencia", al final de la página de inicio). Desde ahí puede editar la lista de miembros y **crear una votación**: título, días (fechas concretas, máximo 7, o "horario semanal fijo" de lunes a domingo), duración (1, 1,5 o 2 h) y rango de horas (por defecto de 9:00 am a 11:00 pm).
 2. **Se comparte el enlace** por WhatsApp.
 3. **Cada miembro toca su nombre** (sin contraseña) y **pinta su disponibilidad** en una cuadrícula de bloques de 30 minutos:
    - **Puedo** (turquesa) o **Si es necesario** (rayado amarillo).
@@ -24,33 +24,31 @@ Antes de construir se investigaron herramientas (Rallly, Doodle, When2meet, Lett
 
 Sin configurar, la app corre en **modo demo**: los votos quedan solo en tu navegador, lo que sirve para probarla.
 
-### 1. Firebase (base de datos, gratis)
+### 1. Firebase (base de datos + clave de admin, gratis)
 
-1. Entra a <https://console.firebase.google.com> → **Agregar proyecto** (por ejemplo `agendador-aematec`). Google Analytics no hace falta.
-2. En el menú: **Compilación → Firestore Database → Crear base de datos** → ubicación `nam5` → modo **producción**.
-3. En la pestaña **Reglas**, pega esto y publica:
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /votaciones/{id} { allow read, write: if true; }
-     }
-   }
-   ```
-4. En **Configuración del proyecto (⚙) → Tus apps → `</>` (Web)** registra una app (no marques Hosting). Copia el objeto `firebaseConfig` en `config.js`, en el campo `firebase`.
+Proyecto: `agendador-839ba` (ya configurado en `config.js`).
 
-> La `apiKey` de Firebase no es secreta: es normal que quede pública en el código.
+1. **Firestore**: **Compilación → Firestore Database → Crear base de datos** → modo **producción**.
+2. **Reglas**: en Firestore → pestaña **Reglas**, pega el contenido de [`firestore.rules`](firestore.rules) y presiona **Publicar**. Así:
+   - cualquiera puede ver las votaciones y votar (solo su disponibilidad, y solo si la votación está abierta);
+   - crear, fijar, reabrir, borrar y editar la lista de miembros requiere la clave de admin.
+3. **Clave de admin**: **Compilación → Authentication → Comenzar → Correo electrónico/contraseña → Habilitar**. Luego, en la pestaña **Usuarios → Agregar usuario**:
+   - correo: `admin@aematec.app` (debe coincidir con `correoAdmin` en `config.js`; no tiene que ser un correo real);
+   - contraseña: **la clave que usarán secretaría y presidencia**.
+
+   La clave vive solo en Firebase y no aparece en el código. Para cambiarla: Authentication → Usuarios → ⋮ → Restablecer contraseña, o borra el usuario y créalo de nuevo con la clave nueva.
+4. **Dominios autorizados**: Authentication → Configuración → Dominios autorizados → agrega `aematec.github.io`.
+
+> La `apiKey` de Firebase no es secreta: es normal que esté en el código. La seguridad está en las reglas.
 
 ### 2. `config.js`
 
-- `claveAdmin`: la clave que usan secretaría y presidencia para crear, fijar y borrar votaciones. **Cámbiala.** Ojo: cualquiera que lea el código la puede ver, así que es solo para evitar errores, no es seguridad.
-- `miembros`: los nombres de la junta, por ejemplo `['Angelo', 'María', ...]`. Aparecen como botones para votar con un toque y permiten mostrar quién falta por votar.
+- `correoAdmin`: el correo de la cuenta de admin del paso 3.
+- `miembros`: la lista inicial de la junta. Después se edita desde **Panel de administración** en la página de inicio (se guarda en Firestore). Los nombres aparecen como botones para votar con un toque y permiten mostrar quién falta por votar.
 
 ### 3. Publicar en GitHub Pages
 
-1. Crea un repositorio (por ejemplo `aematec/agendador`) y sube estos archivos.
-2. **Settings → Pages → Deploy from a branch → `main` / root**.
-3. Queda en `https://aematec.github.io/agendador/`.
+Repositorio: <https://github.com/AEMATEC/Agendador> (**Settings → Pages → Deploy from a branch → `main` / root**). Cada `git push` a `main` publica en <https://aematec.github.io/Agendador/>.
 
 ## Desarrollo local
 
@@ -73,7 +71,8 @@ node test.mjs
 | `index.html` | Estructura y estilos (colores de la web de AEMATEC, Montserrat) |
 | `app.js` | Vistas, cuadrícula, almacenamiento (Firestore o demo) |
 | `logic.js` | Lógica pura: ventanas, ranking y formato de horas |
-| `config.js` | Firebase, clave admin, miembros |
+| `config.js` | Firebase, correo de admin, miembros iniciales |
+| `firestore.rules` | Reglas de seguridad (se pegan en la consola de Firebase) |
 | `test.mjs` | Prueba de `logic.js` |
 | `logo.svg` | Compás de AEMATEC |
 
