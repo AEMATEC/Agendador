@@ -14,7 +14,7 @@ Página para encontrar un espacio común para las sesiones (virtuales) de la Jun
    - La cuadrícula muestra una semana natural (lunes a domingo) a la vez, con flechas para cambiar de semana. Los días que no están en la votación aparecen oscurecidos.
    - Si alguien marca y luego borra todo, deja de contar como votante.
 4. **Resultados**: las 5 mejores ventanas de la duración pedida, sin traslaparse, con quién puede, quién "si es necesario" y quién no. Debajo hay un mapa de calor; al tocar un bloque se ven los nombres.
-5. **Admin fija el horario**: aparece el aviso "Sesión fijada" y un enlace a Google Calendar.
+5. **Admin fija el horario**: aparece el aviso "Sesión fijada" y un enlace a Google Calendar. La administración ve además **Crear reunión en Teams**: abre el formulario de reunión de Teams con título, horario y los correos de los miembros ya puestos. Ahí se elige el canal en **Agregar canal** y se guarda (Teams no permite elegir el canal desde el enlace). Los correos se escriben en el panel de administración (`Nombre, correo`, uno por línea), se guardan en `config/correos` y solo los puede leer la cuenta de admin.
 
 ### Por qué una sola cuadrícula y no dos votaciones
 

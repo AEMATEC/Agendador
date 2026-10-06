@@ -1,6 +1,6 @@
 // ?v=N: subir N en index.html y aquí en cada publicación, para que la caché no mezcle versiones.
-import config from './config.js?v=2';
-import { FRANJAS, PASO, bloques, minuto, hora, ventana, ranking, votantes } from './logic.js?v=2';
+import config from './config.js?v=3';
+import { FRANJAS, PASO, bloques, minuto, hora, ventana, ranking, votantes } from './logic.js?v=3';
 
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
@@ -11,7 +11,7 @@ const local = {
 };
 const fallo = (e) => { app.innerHTML = `<p class="error">Error de conexión: ${esc(e.message)}</p>`; };
 const DEMO = !config.firebase.apiKey;
-let admin = false, miembros = config.miembros;
+let admin = false, miembros = config.miembros, correos = {}; // correos: { nombre: correo }, solo se cargan con sesión de admin
 const esAdmin = () => admin;
 
 // ---------- Almacenamiento: Firestore, o localStorage en modo demo (misma interfaz) ----------
@@ -22,7 +22,7 @@ async function firestore() {
   const f = await import(base + 'firebase-firestore.js');
   const a = await import(base + 'firebase-auth.js');
   const fb = initializeApp(config.firebase), store = f.getFirestore(fb), auth = a.getAuth(fb);
-  const col = f.collection(store, 'votaciones'), junta = f.doc(store, 'config', 'junta');
+  const col = f.collection(store, 'votaciones'), junta = f.doc(store, 'config', 'junta'), correosRef = f.doc(store, 'config', 'correos');
   const ref = (id) => f.doc(col, id);
   const conId = (d) => ({ id: d.id, ...d.data() });
   return {
@@ -31,6 +31,8 @@ async function firestore() {
     salir: () => a.signOut(auth),
     miembros: (cb) => f.onSnapshot(junta, (d) => cb(d.data()?.lista), fallo),
     guardarMiembros: (lista) => f.setDoc(junta, { lista }),
+    correos: () => f.getDoc(correosRef).then((d) => d.data()?.mapa || {}),
+    guardarCorreos: (mapa) => f.setDoc(correosRef, { mapa }),
     lista: (cb) => f.onSnapshot(f.query(col, f.orderBy('creada', 'desc')), (s) => cb(s.docs.map(conId)), fallo),
     ver: (id, cb) => f.onSnapshot(ref(id), (d) => cb(d.exists() ? conId(d) : null), fallo),
     crear: (v) => f.addDoc(col, v).then((r) => r.id),
@@ -54,6 +56,8 @@ function demo() {
     salir: () => fijar('demo-admin', ''),
     miembros: (cb) => sub(() => cb(JSON.parse(local.get('demo-miembros') || 'null'))),
     guardarMiembros: (lista) => fijar('demo-miembros', JSON.stringify(lista)),
+    correos: async () => JSON.parse(local.get('demo-correos') || '{}'),
+    guardarCorreos: (mapa) => fijar('demo-correos', JSON.stringify(mapa)),
     lista: (cb) => sub(() => cb(Object.entries(leer()).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.creada - a.creada))),
     ver: (id, cb) => sub(() => { const v = leer()[id]; cb(v ? { id, ...v } : null); }),
     crear: async (v) => { const id = Date.now().toString(36); await cambiar(id, (todo) => { todo[id] = v; }); return id; },
@@ -78,10 +82,20 @@ function gcal(v) {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(v.titulo)}&dates=${f(inicio)}/${f(inicio + v.duracion)}&ctz=America/Costa_Rica`;
 }
 
+// Abre el formulario de nueva reunión de Teams ya lleno; ahí se elige el canal ("Agregar canal") y se guarda.
+function teams(v) {
+  const { dia, inicio } = v.cerrada;
+  const t = (m) => `${dia}T${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00-06:00`; // Costa Rica, sin horario de verano
+  const attendees = miembros.map((n) => correos[n]).filter(Boolean).join(',');
+  const q = new URLSearchParams({ subject: v.titulo, startTime: t(inicio), endTime: t(inicio + v.duracion), attendees });
+  return `https://teams.microsoft.com/l/meeting/new?${q.toString().replaceAll('+', '%20')}`;
+}
+
 function final(v) {
   if (!v.cerrada) return '';
   const fecha = /^\d{4}-/.test(v.cerrada.dia);
-  return `<div class="final">Sesión fijada: <b>${esc(rango(v, v.cerrada))}</b>${fecha ? `<br><a href="${gcal(v)}" target="_blank" rel="noopener">Agregar a Google Calendar</a>` : ''}</div>`;
+  return `<div class="final">Sesión fijada: <b>${esc(rango(v, v.cerrada))}</b>${fecha ? `<br><a href="${gcal(v)}" target="_blank" rel="noopener">Agregar a Google Calendar</a>${
+    esAdmin() ? ` · <a href="${esc(teams(v))}" target="_blank" rel="noopener">Crear reunión en Teams</a>` : ''}` : ''}</div>`;
 }
 
 // ---------- Vista: inicio ----------
@@ -100,8 +114,9 @@ function inicio() {
       <h2>Sesiones fijadas</h2>
       ${cerradas ? `<ul class="lista">${cerradas}</ul>` : '<p class="muted">Todavía ninguna.</p>'}
       ${esAdmin() ? `<details class="card"><summary><b>Panel de administración</b></summary>
-          <form id="fm"><label for="m">Miembros de la junta (uno por línea)</label>
-            <textarea id="m" name="m" rows="9">${miembros.map(esc).join('\n')}</textarea>
+          <form id="fm"><label for="m">Miembros de la junta (uno por línea: <i>Nombre, correo</i>)</label>
+            <textarea id="m" name="m" rows="9">${miembros.map((n) => esc(correos[n] ? `${n}, ${correos[n]}` : n)).join('\n')}</textarea>
+            <p class="muted">Los correos solo los ve la administración. Se usan para invitar a la reunión de Teams.</p>
             <p class="fila"><button>Guardar miembros</button><span id="ok" class="muted"></span></p></form>
           <button class="sec" id="salir">Cerrar sesión de admin</button></details>`
       : `<details class="admin"><summary>Soy de secretaría / presidencia</summary>
@@ -114,8 +129,11 @@ function inicio() {
     $('#salir')?.addEventListener('click', () => db.salir());
     $('#fm')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const lista = [...new Set(e.target.m.value.split('\n').map((s) => s.trim()).filter(Boolean))];
-      db.guardarMiembros(lista).then(() => { $('#ok') && ($('#ok').textContent = 'Guardado ✓'); }, (err) => alert('No se pudo guardar: ' + err.message));
+      const filas = e.target.m.value.split('\n').map((s) => s.split(',').map((x) => x.trim())).filter(([n]) => n);
+      const lista = [...new Set(filas.map(([n]) => n))];
+      const mapa = Object.fromEntries(filas.filter(([, c]) => c).map(([n, c]) => [n, c]));
+      correos = mapa; // antes de guardar: en demo, guardar re-pinta la vista al instante
+      Promise.all([db.guardarMiembros(lista), db.guardarCorreos(mapa)]).then(() => { $('#ok') && ($('#ok').textContent = 'Guardado ✓'); }, (err) => alert('No se pudo guardar: ' + err.message));
     });
   });
 }
@@ -371,5 +389,9 @@ function ruta() {
 }
 addEventListener('hashchange', ruta);
 await new Promise((listo) => db.miembros((l) => { miembros = l || config.miembros; listo(); }));
-db.alCambiarAdmin((a) => { if (a !== admin) { admin = a; ruta(); } });
+db.alCambiarAdmin(async (a) => {
+  if (a === admin) return;
+  correos = a ? await db.correos().catch(() => ({})) : {};
+  admin = a; ruta();
+});
 ruta();

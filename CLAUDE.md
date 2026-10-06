@@ -9,6 +9,7 @@ Agendador de sesiones de la Junta Directiva AEMATEC (≈8 personas). Idioma de l
 - Los miembros votan sin autenticarse: eligen su nombre, sin verificación (decisión del usuario).
 - Admin = una sola cuenta de Firebase Auth (`config.correoAdmin`, email/contraseña); la "clave" es su contraseña, que vive solo en Firebase. Los permisos se aplican en `firestore.rules`, que el usuario pega en la consola (no hay CLI de Firebase configurada). Si cambias qué campos escribe un no-admin, actualiza las reglas.
 - Miembros: `config/junta.lista` en Firestore; `config.miembros` es solo el valor inicial si ese documento no existe.
+- Correos: `config/correos.mapa` (`{nombre: correo}`), legible solo por admin (reglas). Se cargan al entrar como admin y alimentan el enlace "Crear reunión en Teams" (deep link `teams.microsoft.com/l/meeting/new`, hora fija `-06:00`).
 - Colores: tokens en `:root` de `index.html`, tomados de aematec.github.io (`--navy #0D2B45`, `--teal #00798A`, `--teal-line #00B5C8`, `--teal-light #39C7D5`). Fuente Montserrat.
 
 ## Modelo de datos (colección `votaciones`, un documento por votación)

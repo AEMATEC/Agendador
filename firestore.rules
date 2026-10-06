@@ -10,9 +10,9 @@ service cloud.firestore {
         || (resource.data.cerrada == null
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votos']));
     }
-    // config/junta = { lista: [nombres] }
+    // config/junta = { lista: [nombres] } (pública) · config/correos = { mapa: { nombre: correo } } (solo admin)
     match /config/{doc} {
-      allow read: if true;
+      allow read: if doc != 'correos' || request.auth != null;
       allow write: if request.auth != null;
     }
   }
