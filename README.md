@@ -4,13 +4,15 @@ Página para encontrar un espacio común para las sesiones (virtuales) de la Jun
 
 ## Cómo funciona
 
-1. **Secretaría/presidencia entra con la clave** ("Soy de secretaría / presidencia", al final de la página de inicio). Desde ahí puede editar la lista de miembros y **crear una votación**: título, días (fechas concretas, máximo 7, o "horario semanal fijo" de lunes a domingo), duración (1, 1,5 o 2 h) y rango de horas (por defecto de 9:00 am a 11:00 pm).
+1. **Secretaría/presidencia entra con la clave** ("Soy de secretaría / presidencia", al final de la página de inicio). Desde ahí puede editar la lista de miembros y **crear una votación**: título, días (un rango de fechas de hasta 4 semanas, o "horario semanal fijo" de lunes a domingo), duración (1, 1,5 o 2 h) y rango de horas (por defecto de 9:00 am a 11:00 pm).
 2. **Se comparte el enlace** por WhatsApp.
 3. **Cada miembro toca su nombre** (sin contraseña) y **pinta su disponibilidad** en una cuadrícula de bloques de 30 minutos:
    - **Puedo** (turquesa) o **Si es necesario** (rayado amarillo).
    - Los botones **M / T / N** de cada día marcan de un toque toda la mañana (9–12), la tarde (12–6) o la noche (6–11). Un segundo toque los borra.
    - Al arrastrar se pinta el rectángulo entre la celda donde empezaste y la actual. Si la primera celda ya tenía ese pincel, el arrastre borra.
    - Se guarda solo, al soltar.
+   - La cuadrícula muestra una semana natural (lunes a domingo) a la vez, con flechas para cambiar de semana. Los días que no están en la votación aparecen oscurecidos.
+   - Si alguien marca y luego borra todo, deja de contar como votante.
 4. **Resultados**: las 5 mejores ventanas de la duración pedida, sin traslaparse, con quién puede, quién "si es necesario" y quién no. Debajo hay un mapa de calor; al tocar un bloque se ven los nombres.
 5. **Admin fija el horario**: aparece el aviso "Sesión fijada" y un enlace a Google Calendar.
 

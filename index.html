@@ -67,6 +67,14 @@
   .c, .h { height: 26px; border-left: 1px solid var(--borde); border-bottom: 1px dashed #E8EFF3; }
   .hr { border-bottom: 1px solid var(--borde); }
   .c { touch-action: none; cursor: pointer; }
+  .sp { height: 8px; }
+  .dh.off { color: #A3B3BE; font-weight: 500; }
+  .x { height: 26px; border-left: 1px solid var(--borde); background: repeating-linear-gradient(135deg, #EEF2F5 0 6px, #E3E9ED 6px 12px); }
+  .semnav { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .semnav b { flex: 1; text-align: center; font-size: 14px; }
+  .semnav small { font-weight: 500; }
+  .semnav button { padding: 6px 14px; font-size: 18px; line-height: 1; }
+  button:disabled { opacity: 0.35; cursor: default; }
   [data-v="1"], .si { background: var(--teal); }
   [data-v="2"], .quiza { background: repeating-linear-gradient(45deg, var(--maybe) 0 4px, #FFE3A8 4px 8px); }
   .h { font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -85,6 +93,6 @@
 <body>
 <header><a href="#/"><img src="logo.svg" alt=""><span>Agendador<small>Junta Directiva AEMATEC</small></span></a></header>
 <main id="app"><p class="muted">Cargando…</p></main>
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=2"></script>
 </body>
 </html>

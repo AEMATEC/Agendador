@@ -32,4 +32,9 @@ Agendador de sesiones de la Junta Directiva AEMATEC (≈8 personas). Idioma de l
 
 `python -m http.server 8080` (o la configuración `agendador` de `.claude/launch.json`). Con la `apiKey` puesta se usa el Firebase real; para modo demo, vacía `apiKey` temporalmente. En demo: sembrar en `localStorage['agendador-demo']`, admin con `localStorage['demo-admin'] = '1'`.
 
-Despliegue: push a `main` de github.com/AEMATEC/Agendador → GitHub Pages.
+Despliegue: push a `main` de github.com/AEMATEC/Agendador → GitHub Pages. **Antes de cada push, sube el `?v=N`** en `index.html` (script) y en los imports de `app.js`. GitHub Pages cachea 10 min, y un `logic.js` viejo con un `app.js` nuevo deja la página en "Cargando…".
+
+## Reglas de negocio
+
+- "Votante" = quien tiene al menos un bloque en 1 o 2 (`votantes()` en `logic.js`). Un voto todo en 0 no cuenta en totales, en "no pueden" ni en "faltan".
+- La cuadrícula muestra una semana natural (lun–dom) por vez (`semanas()` en `app.js`). Los días fuera de la votación se dibujan oscurecidos (`.x`) y no se pueden pintar. Máximo 4 semanas por votación.

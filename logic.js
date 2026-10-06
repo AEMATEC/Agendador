@@ -10,14 +10,17 @@ export const minuto = (v, i) => v.desde * 60 + i * PASO;
 
 export function hora(m) {
   const h = Math.floor(m / 60), mm = String(m % 60).padStart(2, '0');
-  return `${(h + 11) % 12 + 1}:${mm} ${h < 12 ? 'am' : 'pm'}`;
+  return `${(h + 11) % 12 + 1}:${mm} ${h % 24 < 12 ? 'am' : 'pm'}`;
 }
+
+// Solo cuenta como votante quien marcó al menos un bloque (marcar y luego borrar todo = no votó).
+export const votantes = (v) => Object.keys(v.votos || {}).filter((p) => Object.values(v.votos[p]).some((s) => /[12]/.test(s)));
 
 // Quién puede en una ventana [i, i+n): todos los bloques en 1 → sí; con algún 2 → si es necesario; algún 0 → no.
 export function ventana(v, diaId, i, n) {
   const si = [], quiza = [], no = [];
-  for (const [p, dias] of Object.entries(v.votos || {})) {
-    const s = (dias[diaId] || '').slice(i, i + n).padEnd(n, '0');
+  for (const p of votantes(v)) {
+    const s = (v.votos[p][diaId] || '').slice(i, i + n).padEnd(n, '0');
     (s.includes('0') ? no : s.includes('2') ? quiza : si).push(p);
   }
   return { dia: diaId, inicio: minuto(v, i), i, si, quiza, no, puntaje: si.length + quiza.length / 2 };

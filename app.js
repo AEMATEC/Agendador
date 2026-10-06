@@ -1,5 +1,6 @@
-import config from './config.js';
-import { FRANJAS, PASO, bloques, minuto, hora, ventana, ranking } from './logic.js';
+// ?v=N: subir N en index.html y aquí en cada publicación, para que la caché no mezcle versiones.
+import config from './config.js?v=2';
+import { FRANJAS, PASO, bloques, minuto, hora, ventana, ranking, votantes } from './logic.js?v=2';
 
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
@@ -87,7 +88,7 @@ function final(v) {
 
 function inicio() {
   const item = (v) => `<li><a href="#/v/${v.id}"><b>${esc(v.titulo)}</b><span>${
-    v.cerrada ? esc(rango(v, v.cerrada)) : `${esc(v.dias[0].label)} → ${esc(v.dias.at(-1).label)} · ${Object.keys(v.votos || {}).length} votos`
+    v.cerrada ? esc(rango(v, v.cerrada)) : `${esc(v.dias[0].label)} → ${esc(v.dias.at(-1).label)} · ${votantes(v).length} votos`
   }</span></a></li>`;
   return db.lista((vs) => {
     const abiertas = vs.filter((v) => !v.cerrada).map(item).join('');
@@ -123,6 +124,24 @@ function inicio() {
 
 const SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const iso = (d) => d.toLocaleDateString('en-CA'); // YYYY-MM-DD en hora local
+const etiquetaFecha = (d) => { const l = d.toLocaleDateString('es-CR', { weekday: 'short', day: 'numeric', month: 'short' }); return l[0].toUpperCase() + l.slice(1); };
+
+// Agrupa los días en semanas naturales (lun–dom); los días que no están en la votación quedan con activo: false.
+function semanas(v) {
+  if (!/^\d{4}-/.test(v.dias[0].id)) return [v.dias.map((d) => ({ ...d, activo: true }))]; // modo semanal fijo
+  const porId = new Map(v.dias.map((d) => [d.id, d])), res = new Map();
+  for (const d of v.dias) {
+    const lunes = new Date(d.id + 'T12:00');
+    lunes.setDate(lunes.getDate() - (lunes.getDay() + 6) % 7);
+    if (res.has(iso(lunes))) continue;
+    res.set(iso(lunes), Array.from({ length: 7 }, (_, j) => {
+      const x = new Date(lunes); x.setDate(lunes.getDate() + j);
+      const dia = porId.get(iso(x));
+      return dia ? { ...dia, activo: true } : { id: iso(x), label: etiquetaFecha(x), activo: false };
+    }));
+  }
+  return [...res.values()];
+}
 
 function nueva() {
   const hoy = new Date(), lunes = new Date(hoy);
@@ -136,7 +155,7 @@ function nueva() {
       <select name="modo"><option value="fechas">Fechas específicas</option><option value="semana">Horario semanal fijo (Lunes a Domingo)</option></select>
       <div class="fila" id="fechas">
         <div><label>Desde</label><input type="date" name="ini" value="${iso(lunes)}"></div>
-        <div><label>Hasta (máx. 7 días)</label><input type="date" name="fin" value="${iso(domingo)}"></div>
+        <div><label>Hasta</label><input type="date" name="fin" value="${iso(domingo)}"></div>
       </div>
       <div class="fila">
         <div><label>Duración</label><select name="duracion"><option value="60">1 h</option><option value="90">1,5 h</option><option value="120" selected>2 h</option></select></div>
@@ -156,12 +175,11 @@ function nueva() {
       dias = SEMANA.map((label) => ({ id: label.slice(0, 3).toLowerCase(), label }));
     } else {
       dias = [];
-      for (let d = new Date(f.ini.value + 'T12:00'); iso(d) <= f.fin.value && dias.length < 8; d.setDate(d.getDate() + 1)) {
-        const label = d.toLocaleDateString('es-CR', { weekday: 'short', day: 'numeric', month: 'short' });
-        dias.push({ id: iso(d), label: label[0].toUpperCase() + label.slice(1) });
+      for (let d = new Date(f.ini.value + 'T12:00'); iso(d) <= f.fin.value && dias.length < 29; d.setDate(d.getDate() + 1)) {
+        dias.push({ id: iso(d), label: etiquetaFecha(d) });
       }
     }
-    const err = !dias.length ? 'Revisa las fechas.' : dias.length > 7 ? 'Máximo 7 días por votación.'
+    const err = !dias.length ? 'Revisa las fechas.' : dias.length > 28 ? 'Máximo 4 semanas por votación.'
       : (hasta - desde) * 60 < duracion ? 'El rango de horas es más corto que la duración.' : '';
     if (err) { $('#err').textContent = err; return; }
     const id = await db.crear({ titulo: f.titulo.value.trim(), dias, desde, hasta, duracion, votos: {}, cerrada: null, creada: Date.now() });
@@ -174,6 +192,7 @@ function nueva() {
 
 function votacion(id) {
   let v, yo = local.get('nombre'), mio = null, tab = 'votar', pincel = '1', pintando = false, sel = null;
+  let sem = null, semana = [], nav = ''; // semana natural visible (lun–dom)
   const ac = new AbortController();
 
   const cargarMio = () => { mio = { ...(v.votos?.[yo] || {}) }; };
@@ -187,27 +206,30 @@ function votacion(id) {
   };
 
   function grilla(modo) {
-    const n = bloques(v), total = Object.keys(v.votos || {}).length || 1;
+    const n = bloques(v), total = votantes(v).length || 1;
     const editable = modo === 'votar' && !v.cerrada;
-    let h = `<div class="grid ${modo}" style="--d:${v.dias.length}"><div class="dh"></div>`;
-    for (const d of v.dias) {
-      h += `<div class="dh">${esc(d.label)}${editable ? `<div class="fr">${Object.keys(FRANJAS)
+    const etiquetaHora = (m) => (m % 60 ? '' : hora(m).replace(':00', ''));
+    let h = `<div class="grid ${modo}" style="--d:${semana.length}"><div class="dh"></div>`;
+    for (const d of semana) {
+      h += `<div class="dh${d.activo ? '' : ' off'}">${esc(d.label)}${editable && d.activo ? `<div class="fr">${Object.keys(FRANJAS)
         .map((f) => `<button data-franja="${f}" data-dia="${d.id}" title="Marcar ${f.toLowerCase()}" aria-label="${f} del ${esc(d.label)}">${f[0]}<span class="resto">${f.slice(1)}</span></button>`).join('')}</div>` : ''}</div>`;
     }
+    h += '<div class="sp"></div>'.repeat(semana.length + 1); // espacio para que la primera hora no quede tapada por el encabezado
     for (let i = 0; i < n; i++) {
       const m = minuto(v, i), hr = i % 2 ? ' hr' : '';
-      h += `<div class="t">${m % 60 ? '' : hora(m).replace(':00', '')}</div>`;
-      for (const d of v.dias) {
+      h += `<div class="t">${etiquetaHora(m)}</div>`;
+      for (const d of semana) {
+        if (!d.activo) { h += `<div class="x${hr}"></div>`; continue; }
         if (modo === 'votar') { h += `<div class="c${hr}" data-dia="${d.id}" data-i="${i}" data-v="${(mio[d.id] || '')[i] || '0'}"></div>`; continue; }
         const w = ventana(v, d.id, i, 1), a = w.puntaje / total;
         h += `<div class="h${hr}${sel === `${d.id}|${i}` ? ' sel' : ''}" data-dia="${d.id}" data-i="${i}" style="background:rgb(0 121 138 / ${a});color:${a > 0.55 ? '#fff' : 'inherit'}">${w.puntaje ? w.si.length + (w.quiza.length ? `+${w.quiza.length}` : '') : ''}</div>`;
       }
     }
-    return h + '</div>';
+    return h + `<div class="sp t">${etiquetaHora(v.hasta * 60)}</div>` + '<div class="sp"></div>'.repeat(semana.length) + '</div>';
   }
 
   function resultados() {
-    const personas = Object.keys(v.votos || {});
+    const personas = votantes(v);
     if (!personas.length) return '<p class="muted">Todavía nadie ha votado.</p>';
     const faltan = miembros.filter((m) => !personas.includes(m));
     const top = ranking(v);
@@ -220,7 +242,7 @@ function votacion(id) {
       <h2>Mejores opciones de ${duracionTxt(v.duracion)}</h2>
       ${top.length ? `<ol class="opciones">${top.map(op).join('')}</ol>` : '<p class="muted">No hay ningún espacio en común todavía.</p>'}
       <h2>Mapa de disponibilidad</h2><p class="muted">Número = personas disponibles (+ si es necesario). Toca un bloque para ver nombres.</p>
-      <div id="detalle"></div>${grilla('calor')}`;
+      ${nav}<div id="detalle"></div>${grilla('calor')}`;
   }
 
   function quienSoy() {
@@ -232,7 +254,15 @@ function votacion(id) {
 
   function render() {
     if (!v) { app.innerHTML = '<a href="#/">← Volver</a><p>Esta votación no existe o fue borrada.</p>'; return; }
-    const votos = Object.keys(v.votos || {}).length;
+    const votos = votantes(v).length;
+    const ss = semanas(v);
+    if (sem === null) { const hoy = iso(new Date()); sem = Math.max(0, ss.findIndex((s) => s.some((d) => d.activo && d.id >= hoy))); }
+    sem = Math.min(sem, ss.length - 1);
+    semana = ss[sem];
+    nav = ss.length < 2 ? '' : `<div class="semnav">
+      <button class="sec" data-sem="-1" aria-label="Semana anterior"${sem === 0 ? ' disabled' : ''}>‹</button>
+      <b>${esc(ss[sem][0].label)} – ${esc(ss[sem][6].label)}<small class="muted"> · semana ${sem + 1} de ${ss.length}</small></b>
+      <button class="sec" data-sem="1" aria-label="Semana siguiente"${sem === ss.length - 1 ? ' disabled' : ''}>›</button></div>`;
     app.innerHTML = `${aviso}<a href="#/">← Volver</a>
       <h1>${esc(v.titulo)}</h1>
       <p class="muted">Sesión de ${duracionTxt(v.duracion)} · entre ${hora(v.desde * 60)} y ${hora(v.hasta * 60)}
@@ -248,7 +278,7 @@ function votacion(id) {
             <button data-pincel="2" class="${pincel === '2' ? 'on' : ''}"><i class="muestra quiza"></i>Si es necesario</button>
             <span id="estado" class="muted"></span></div>
             <p class="muted">Toca o arrastra sobre los bloques. <b>M / T / N</b> marca toda la mañana, tarde o noche. Para hacer scroll en el celular, desliza sobre la columna de horas.</p>`}
-          ${grilla('votar')}`}`}
+          ${nav}${grilla('votar')}`}`}
       ${esAdmin() ? `<p style="margin-top:32px">${v.cerrada ? '<button class="sec" id="reabrir">Reabrir votación</button> ' : ''}<button class="peligro" id="borrar">Borrar votación</button></p>` : ''}`;
   }
 
@@ -260,6 +290,7 @@ function votacion(id) {
     else if (t.id === 'cambiar') { yo = null; }
     else if (t.dataset.tab) { tab = t.dataset.tab; }
     else if (t.dataset.pincel) { pincel = t.dataset.pincel; }
+    else if (t.dataset.sem) { sem += +t.dataset.sem; sel = null; }
     else if (t.id === 'copiar') { navigator.clipboard.writeText(location.href).then(() => { t.textContent = 'Enlace copiado ✓'; }); return; }
     else if (t.dataset.franja) {
       const [a, b] = FRANJAS[t.dataset.franja], dia = t.dataset.dia;
