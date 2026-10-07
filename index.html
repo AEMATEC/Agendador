@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><!-- con tema oscuro propio, Chrome/Samsung no invierten los colores a la fuerza -->
 <title>Agendador · Junta AEMATEC</title>
 <link rel="icon" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,9 +12,19 @@
   :root {
     --navy: #0D2B45; --navy-hover: #164563; --teal: #00798A; --teal-line: #00B5C8; --teal-light: #39C7D5;
     --muted: #405769; --borde: #D8E3E9; --bg: #F4F8FA; --card: #fff; --maybe: #FFB020;
+    --texto: var(--navy); --enlace: var(--teal); --linea: #E8EFF3; --off: #A3B3BE; --x1: #EEF2F5; --x2: #E3E9ED;
+    --aviso: #FFF4D6; --aviso-borde: #F0D58A; --error: #B3261E;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --navy: #1E5378; --navy-hover: #276590; --muted: #9FB4C2; --borde: #2A4357; --bg: #0A1E30; --card: #10283D;
+      --texto: #E3EEF4; --enlace: var(--teal-light); --linea: #1C3447; --off: #5C7383; --x1: #0D2336; --x2: #132C41;
+      --aviso: #3A2F10; --aviso-borde: #6B5420; --error: #FF8A80;
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Montserrat, system-ui, sans-serif; background: var(--bg); color: var(--navy); }
+  body { margin: 0; font-family: Montserrat, system-ui, sans-serif; background: var(--bg); color: var(--texto); }
   header { background: var(--card); border-bottom: 1px solid var(--borde); }
   header a { display: flex; align-items: center; gap: 10px; max-width: 760px; margin: auto; padding: 10px 16px; color: inherit; text-decoration: none; font-weight: 700; }
   header img { height: 34px; }
@@ -21,13 +32,13 @@
   main { max-width: 760px; margin: auto; padding: 16px 16px 60px; }
   h1 { font-size: 22px; margin: 8px 0 4px; }
   h2 { font-size: 16px; margin: 24px 0 8px; }
-  a { color: var(--teal); }
+  a { color: var(--enlace); }
   .muted { color: var(--muted); font-size: 14px; }
-  .demo { background: #FFF4D6; border: 1px solid #F0D58A; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+  .demo { background: var(--aviso); border: 1px solid var(--aviso-borde); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
   .card { background: var(--card); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; margin: 12px 0; }
   .btn, button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; background: var(--navy); color: #fff; text-decoration: none; display: inline-block; }
   .btn:hover, button:hover { background: var(--navy-hover); }
-  .sec { background: var(--card); color: var(--navy); border: 1px solid var(--borde); }
+  .sec { background: var(--card); color: var(--texto); border: 1px solid var(--borde); }
   .sec:hover { background: var(--bg); }
   .peligro { background: #B3261E; }
   .link { background: none; color: var(--muted); font-weight: 500; padding: 0; text-decoration: underline; margin-top: 32px; }
@@ -35,41 +46,41 @@
   details.admin { margin-top: 32px; color: var(--muted); }
   summary { cursor: pointer; }
   textarea { resize: vertical; }
-  input, select, textarea { font: inherit; padding: 9px 10px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; color: var(--navy); width: 100%; }
+  input, select, textarea { font: inherit; padding: 9px 10px; border: 1px solid var(--borde); border-radius: 8px; background: var(--card); color: var(--texto); width: 100%; }
   label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
   .fila { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .fila > * { flex: 1; min-width: 120px; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
-  .chip { background: var(--bg); color: var(--navy); border: 1px solid var(--borde); border-radius: 99px; }
+  .chip { background: var(--bg); color: var(--texto); border: 1px solid var(--borde); border-radius: 99px; }
   .chip:hover, .chip.on { background: var(--teal); color: #fff; border-color: var(--teal); }
   .lista { list-style: none; padding: 0; margin: 0; }
   .lista li { background: var(--card); border: 1px solid var(--borde); border-radius: 10px; margin-bottom: 8px; }
   .lista a { display: block; padding: 12px 14px; color: inherit; text-decoration: none; }
-  .lista a:hover { background: #fafcfd; }
+  .lista a:hover { background: var(--bg); }
   .lista span { display: block; font-size: 13px; color: var(--muted); }
   .final { background: var(--teal); color: #fff; border-radius: 12px; padding: 14px; margin: 12px 0; }
   .final a { color: #fff; font-weight: 600; }
   .tabs { display: flex; border-bottom: 2px solid var(--borde); margin: 16px 0 12px; }
   .tabs button { background: none; color: var(--muted); border-radius: 0; border-bottom: 3px solid transparent; margin-bottom: -2px; }
-  .tabs button.on { color: var(--navy); border-color: var(--teal-line); }
+  .tabs button.on { color: var(--texto); border-color: var(--teal-line); }
   .pinceles { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; font-size: 13px; }
-  .pinceles button { background: var(--card); color: var(--navy); border: 2px solid var(--borde); padding: 6px 10px; display: flex; gap: 6px; align-items: center; }
-  .pinceles button.on { border-color: var(--navy); }
+  .pinceles button { background: var(--card); color: var(--texto); border: 2px solid var(--borde); padding: 6px 10px; display: flex; gap: 6px; align-items: center; }
+  .pinceles button.on { border-color: var(--texto); }
   .muestra { width: 16px; height: 16px; border-radius: 4px; display: inline-block; }
   /* Cuadrícula */
   .grid { display: grid; grid-template-columns: 46px repeat(var(--d), minmax(0, 1fr)); user-select: none; -webkit-user-select: none; background: var(--card); border: 1px solid var(--borde); border-radius: 10px; }
   .dh { position: sticky; top: 0; z-index: 1; background: var(--card); text-align: center; font-size: 12px; font-weight: 600; padding: 6px 2px; border-bottom: 1px solid var(--borde); line-height: 1.2; }
   .fr { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; padding: 0 3px; }
-  .fr button { padding: 0; height: 28px; width: 100%; font-size: 12px; border-radius: 6px; background: var(--bg); color: var(--navy); border: 1px solid var(--borde); }
+  .fr button { padding: 0; height: 28px; width: 100%; font-size: 12px; border-radius: 6px; background: var(--bg); color: var(--texto); border: 1px solid var(--borde); }
   .fr button:hover { background: var(--teal-light); }
   @media (max-width: 600px) { .resto { display: none; } }
   .t { font-size: 11px; color: var(--muted); text-align: right; padding-right: 6px; transform: translateY(-7px); }
-  .c, .h { height: 26px; border-left: 1px solid var(--borde); border-bottom: 1px dashed #E8EFF3; }
+  .c, .h { height: 26px; border-left: 1px solid var(--borde); border-bottom: 1px dashed var(--linea); }
   .hr { border-bottom: 1px solid var(--borde); }
   .c { touch-action: none; cursor: pointer; }
   .sp { height: 8px; }
-  .dh.off { color: #A3B3BE; font-weight: 500; }
-  .x { height: 26px; border-left: 1px solid var(--borde); background: repeating-linear-gradient(135deg, #EEF2F5 0 6px, #E3E9ED 6px 12px); }
+  .dh.off { color: var(--off); font-weight: 500; }
+  .x { height: 26px; border-left: 1px solid var(--borde); background: repeating-linear-gradient(135deg, var(--x1) 0 6px, var(--x2) 6px 12px); }
   .semnav { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
   .semnav b { flex: 1; text-align: center; font-size: 14px; }
   .semnav small { font-weight: 500; }
@@ -78,7 +89,7 @@
   [data-v="1"], .si { background: var(--teal); }
   [data-v="2"], .quiza { background: repeating-linear-gradient(45deg, var(--maybe) 0 4px, #FFE3A8 4px 8px); }
   .h { font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-  .h.sel { outline: 2px solid var(--navy); outline-offset: -2px; }
+  .h.sel { outline: 2px solid var(--texto); outline-offset: -2px; }
   .opciones { list-style: none; padding: 0; margin: 0; counter-reset: o; }
   .opciones li { background: var(--card); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
   .opciones li:first-child { border: 2px solid var(--teal-line); }
@@ -87,12 +98,12 @@
   .opciones small { display: block; color: var(--muted); margin-top: 4px; }
   .opciones button { margin-top: 8px; padding: 6px 12px; font-size: 13px; }
   #detalle { min-height: 40px; font-size: 13px; margin: 8px 0; }
-  .error { color: #B3261E; }
+  .error { color: var(--error); }
 </style>
 </head>
 <body>
 <header><a href="#/"><img src="logo.svg" alt=""><span>Agendador<small>Junta Directiva AEMATEC</small></span></a></header>
 <main id="app"><p class="muted">Cargando…</p></main>
-<script type="module" src="app.js?v=3"></script>
+<script type="module" src="app.js?v=4"></script>
 </body>
 </html>

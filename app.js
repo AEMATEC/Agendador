@@ -1,6 +1,6 @@
 // ?v=N: subir N en index.html y aquí en cada publicación, para que la caché no mezcle versiones.
-import config from './config.js?v=3';
-import { FRANJAS, PASO, bloques, minuto, hora, ventana, ranking, votantes } from './logic.js?v=3';
+import config from './config.js?v=4';
+import { FRANJAS, PASO, bloques, minuto, hora, ventana, ranking, votantes } from './logic.js?v=4';
 
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
